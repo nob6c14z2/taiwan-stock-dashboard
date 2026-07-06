@@ -14,10 +14,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto
 .refresh-btn{background:#3266ad;border:none;border-radius:8px;color:#fff;font-size:12px;padding:5px 12px;cursor:pointer;display:flex;align-items:center;gap:5px}
 .refresh-btn:hover{background:#185fa5}
 .refresh-btn:disabled{background:#aaa;cursor:not-allowed}
-.section-title{font-size:13px;font-weight:500;color:#555;margin-bottom:.65rem;display:flex;align-items:center;gap:6px}
+.section-title{font-size:13px;font-weight:500;color:#555;margin-bottom:.5rem;display:flex;align-items:center;gap:6px}
+.data-date{font-size:12px;color:#888;margin-bottom:.65rem}
 .card{background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;padding:1rem 1.25rem;margin-bottom:1rem}
-
-/* 股票表格 */
 .stock-table{width:100%;border-collapse:collapse;table-layout:fixed}
 .stock-table th{font-size:11px;color:#888;font-weight:400;padding:4px 6px;text-align:left;border-bottom:0.5px solid #eee}
 .stock-table th:nth-child(3),.stock-table th:nth-child(4),.stock-table th:nth-child(5){text-align:right}
@@ -34,8 +33,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto
 .vol-cell{display:flex;align-items:center;gap:6px;justify-content:flex-end}
 .vbar-bg{width:48px;height:4px;background:#eee;border-radius:2px;overflow:hidden;flex-shrink:0}
 .vbar{height:100%;border-radius:2px;background:#3266ad;opacity:.6}
-
-/* 新聞 */
 .search-wrap{margin-bottom:.75rem}
 .search-wrap input{width:100%;height:36px;border:0.5px solid #ddd;border-radius:8px;background:#fff;color:#1a1a1a;font-size:13px;padding:0 12px}
 .search-wrap input:focus{outline:2px solid #3266ad;outline-offset:1px}
@@ -55,23 +52,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto
 .news-title{font-size:14px;font-weight:500;color:#1a1a1a;margin-bottom:4px;line-height:1.45;transition:color .12s}
 .news-summary{font-size:12px;color:#666;line-height:1.65}
 .no-result{text-align:center;padding:2rem;color:#aaa;font-size:13px}
-
-/* 國際趨勢 */
-.trend-card{background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;padding:1rem 1.25rem;margin-bottom:.65rem}
-.trend-title{font-size:13px;font-weight:500;color:#1a1a1a;margin-bottom:4px;display:flex;align-items:center;gap:6px}
-.trend-badge{font-size:10px;padding:2px 8px;border-radius:999px;font-weight:400}
+.trend-card{background:#fafafa;border:0.5px solid #e8e8e8;border-radius:10px;padding:.9rem 1.1rem;margin-bottom:.65rem}
+.trend-title{font-size:13px;font-weight:500;color:#1a1a1a;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.trend-badge{font-size:10px;padding:2px 8px;border-radius:999px;font-weight:400;flex-shrink:0}
 .badge-hot{background:#faeeda;color:#854f0b}
 .badge-watch{background:#e6f1fb;color:#185fa5}
 .badge-risk{background:#fcebeb;color:#a32d2d}
 .trend-body{font-size:12px;color:#555;line-height:1.7}
-
-/* 載入 */
-.skeleton{background:#f0f0f0;border-radius:4px;animation:pulse 1.2s ease-in-out infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
 .loading-msg{text-align:center;padding:1.5rem;color:#888;font-size:13px}
-.spinner{width:18px;height:18px;border:2px solid #ddd;border-top-color:#3266ad;border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:-4px;margin-right:6px}
+.spinner{width:16px;height:16px;border:2px solid #ddd;border-top-color:#3266ad;border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:-3px;margin-right:6px}
 @keyframes spin{to{transform:rotate(360deg)}}
-.error-msg{background:#fcebeb;color:#a32d2d;border-radius:8px;padding:.75rem 1rem;font-size:13px;margin-bottom:.75rem}
+.error-msg{background:#fcebeb;color:#a32d2d;border-radius:8px;padding:.75rem 1rem;font-size:13px}
 </style>
 </head>
 <body>
@@ -88,12 +79,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto
 </div>
 
 <div class="card">
-  <div class="section-title">🔥 今日成交量排行 TOP 10（不含 ETF）</div>
+  <div class="section-title">🔥 成交量排行 TOP 10（不含 ETF）</div>
+  <div class="data-date" id="stock-date"></div>
   <div id="stock-area"><div class="loading-msg"><span class="spinner"></span>載入股票資料中...</div></div>
 </div>
 
 <div class="card">
-  <div class="section-title">📰 今日財經新聞</div>
+  <div class="section-title">📰 財經新聞</div>
   <div class="search-wrap">
     <input type="text" id="newsSearch" placeholder="搜尋個股名稱或關鍵字..." oninput="filterNews()">
   </div>
@@ -107,11 +99,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto
 </div>
 
 </div>
-
 <script>
-const API_KEY = '';
 let allNews = [];
 let activeFilter = null;
+
+function getYesterday() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  // 若昨天是週日則退到週五
+  if (d.getDay() === 0) d.setDate(d.getDate() - 2);
+  if (d.getDay() === 6) d.setDate(d.getDate() - 1);
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return { str: `${y}/${m}/${day}`, label: `${y}年${m}月${day}日（昨日收盤）` };
+}
 
 async function callClaude(prompt) {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -124,22 +126,24 @@ async function callClaude(prompt) {
       messages: [{ role: 'user', content: prompt }]
     })
   });
+  if (!res.ok) throw new Error('API error ' + res.status);
   const data = await res.json();
-  const text = data.content.filter(b => b.type === 'text').map(b => b.text).join('');
-  return text;
+  return data.content.filter(b => b.type === 'text').map(b => b.text).join('');
 }
 
 async function loadStocks() {
   const area = document.getElementById('stock-area');
+  const dateEl = document.getElementById('stock-date');
+  const yest = getYesterday();
+  dateEl.textContent = '資料日期：' + yest.label;
   try {
     const raw = await callClaude(
-      `請搜尋今日台灣股市成交量排行前10名（排除ETF和ETN，只要一般股票），` +
-      `回傳純JSON陣列，格式為 [{"rank":1,"code":"2330","name":"台積電","price":1080,"chg":10,"pct":0.93,"vol":198000}]，` +
-      `price單位元、chg漲跌金額、pct漲跌百分比（含正負號數字）、vol成交張數。` +
-      `只回傳JSON不要任何說明或markdown。`
+      `請搜尋台灣股市 ${yest.str} 收盤成交量排行前10名，排除所有ETF和ETN，只要一般上市股票。` +
+      `回傳純JSON陣列，格式：[{"rank":1,"code":"2330","name":"台積電","price":1080,"chg":10,"pct":0.93,"vol":198000}]` +
+      `price=收盤價（元），chg=漲跌金額，pct=漲跌百分比（數字含正負），vol=成交張數。` +
+      `只回傳JSON，不要任何說明或markdown符號。`
     );
-    const clean = raw.replace(/```json|```/g, '').trim();
-    const stocks = JSON.parse(clean);
+    const stocks = JSON.parse(raw.replace(/```json|```/g,'').trim());
     renderStocks(stocks);
   } catch(e) {
     area.innerHTML = `<div class="error-msg">⚠️ 股票資料載入失敗，請稍後再試。</div>`;
@@ -149,11 +153,10 @@ async function loadStocks() {
 function renderStocks(stocks) {
   const maxVol = Math.max(...stocks.map(s => s.vol));
   let html = `<table class="stock-table"><thead><tr>
-    <th style="width:28px">#</th>
-    <th>股票</th>
-    <th style="width:80px">股價</th>
-    <th style="width:110px">漲跌</th>
-    <th style="width:110px">成交量(張)</th>
+    <th style="width:28px">#</th><th>股票</th>
+    <th style="width:80px">收盤價</th>
+    <th style="width:115px">漲跌</th>
+    <th style="width:115px">成交量(張)</th>
   </tr></thead><tbody>`;
   stocks.forEach(s => {
     const cls = s.pct > 0 ? 'up' : s.pct < 0 ? 'down' : 'flat';
@@ -173,16 +176,15 @@ function renderStocks(stocks) {
 
 async function loadNews() {
   const area = document.getElementById('news-area');
+  const yest = getYesterday();
   try {
-    const today = new Date().toLocaleDateString('zh-TW');
     const raw = await callClaude(
-      `請搜尋今日（${today}）台灣財經新聞5則和國際財經新聞3則，` +
-      `將每則新聞整理成一小段摘要（2-3句話），並找出文中提到的台灣個股名稱（最多3個）。` +
-      `回傳純JSON陣列，格式：[{"title":"新聞標題","summary":"摘要內容","tags":["台積電"],"source":"來源名稱","url":"新聞網址","time":"時間","type":"tw或intl"}]。` +
-      `url請填真實的新聞網址。只回傳JSON不要任何說明或markdown。`
+      `請搜尋 ${yest.str} 前後的台灣財經新聞5則和國際財經科技新聞3則。` +
+      `將每則新聞整理成2-3句摘要，並標出文中提到的台灣個股名稱（最多3個）。` +
+      `回傳純JSON陣列，格式：[{"title":"標題","summary":"摘要","tags":["台積電"],"source":"來源","url":"真實網址","time":"時間","type":"tw或intl"}]。` +
+      `只回傳JSON，不要任何說明或markdown符號。`
     );
-    const clean = raw.replace(/```json|```/g, '').trim();
-    allNews = JSON.parse(clean);
+    allNews = JSON.parse(raw.replace(/```json|```/g,'').trim());
     buildChips();
     renderNews();
   } catch(e) {
@@ -223,12 +225,12 @@ function renderNews() {
   else if(q) filtered = allNews.filter(n=>n.title.includes(q)||n.summary.includes(q)||(n.tags||[]).some(t=>t.includes(q)));
   const el = document.getElementById('news-area');
   if(!filtered.length){ el.innerHTML='<div class="no-result">找不到相關新聞</div>'; return; }
-  el.innerHTML = filtered.map(n=>{
+  el.innerHTML = filtered.map(n => {
     const tags = (n.tags||[]).map(t=>`<span class="ntag">${t}</span>`).join('');
-    const srcBadge = n.type==='intl' ? '<span style="font-size:10px;padding:1px 6px;border-radius:999px;background:#eaf3de;color:#3b6d11;margin-left:4px">國際</span>' : '';
+    const intlBadge = n.type==='intl' ? '<span style="font-size:10px;padding:1px 6px;border-radius:999px;background:#eaf3de;color:#3b6d11;margin-left:4px">國際</span>' : '';
     return `<a class="news-card" href="${n.url||'#'}" target="_blank" rel="noopener">
       <div class="news-meta">
-        <span class="news-src">${n.source||''}${srcBadge}</span>
+        <span class="news-src">${n.source||''}${intlBadge}</span>
         <span class="news-time">· ${n.time||''}</span>
         <div class="ntags">${tags}</div>
       </div>
@@ -242,13 +244,12 @@ async function loadTrends() {
   const area = document.getElementById('trend-area');
   try {
     const raw = await callClaude(
-      `請根據本週國際財經與科技新聞，整理3個最重要的產業趨勢，每個趨勢給一個標題、一個熱度標籤（熱門/關注/風險）和2-3句說明，` +
-      `重點放在對台灣相關產業（半導體、電子、AI）的影響。` +
-      `回傳純JSON陣列，格式：[{"title":"趨勢標題","badge":"熱門","body":"說明內容"}]。` +
-      `只回傳JSON不要任何說明或markdown。`
+      `請根據本週國際財經與科技新聞，整理3個對台灣半導體、電子、AI產業最重要的趨勢。` +
+      `每個趨勢給一個標題、標籤（熱門/關注/風險之一）和2-3句說明（繁體中文）。` +
+      `回傳純JSON陣列，格式：[{"title":"趨勢標題","badge":"熱門","body":"說明"}]。` +
+      `只回傳JSON，不要任何說明或markdown符號。`
     );
-    const clean = raw.replace(/```json|```/g, '').trim();
-    const trends = JSON.parse(clean);
+    const trends = JSON.parse(raw.replace(/```json|```/g,'').trim());
     const badgeMap = {'熱門':'badge-hot','關注':'badge-watch','風險':'badge-risk'};
     area.innerHTML = trends.map(t=>`
       <div class="trend-card">
@@ -266,26 +267,20 @@ async function loadTrends() {
 
 async function loadAll() {
   const btn = document.getElementById('refreshBtn');
-  const icon = document.getElementById('refresh-icon');
   btn.disabled = true;
-  icon.style.display = 'inline-block';
-  icon.style.animation = 'spin .7s linear infinite';
-
+  allNews = [];
+  activeFilter = null;
+  document.getElementById('filterChips').innerHTML = '';
   document.getElementById('stock-area').innerHTML = '<div class="loading-msg"><span class="spinner"></span>載入股票資料中...</div>';
   document.getElementById('news-area').innerHTML = '<div class="loading-msg"><span class="spinner"></span>載入新聞中...</div>';
   document.getElementById('trend-area').innerHTML = '<div class="loading-msg"><span class="spinner"></span>整理趨勢報告中...</div>';
-  document.getElementById('filterChips').innerHTML = '';
-  allNews = [];
-  activeFilter = null;
 
   const now = new Date();
   document.getElementById('update-time').textContent =
-    `${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')} 更新`;
+    `查詢於 ${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
 
   await Promise.all([loadStocks(), loadNews(), loadTrends()]);
-
   btn.disabled = false;
-  icon.style.animation = '';
 }
 
 loadAll();
